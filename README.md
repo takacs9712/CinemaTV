@@ -1,6 +1,6 @@
 # Cinema TV · Samsung Home Theater
 
-Magyar médiaközpont Samsung Tizen TV-hez, Windows PC-s filmkiszolgálóval. A célkészülék a Samsung UE55TU7092UXXH; a Tizen projekt minimuma 5.5. A PC-s előnézet és a telepíthető TV-app ugyanazt a felületet használja, eltérő eszközfunkciókkal.
+Magyar médiaközpont Samsung Tizen TV-hez, Windows PC-s filmkiszolgálóval. A célkészülék a Samsung TV; a Tizen projekt minimuma 5.5. A PC-s előnézet és a telepíthető TV-app ugyanazt a felületet használja, eltérő eszközfunkciókkal.
 
 ## Mit tud ez a kiadás?
 
