@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="hu"><head><meta charset="utf-8"><meta name="viewport" content="width=1920, initial-scale=1">
+<title>Cinema TV</title><link rel="stylesheet" href="style.css"></head>
+<body>
+<div id="app">
+  <header><div class="brand">CINEMA<span>TV</span></div><nav id="navigation">
+    <button data-page="home" class="active">Kezdőlap</button><button data-page="apps">Alkalmazások</button><button data-page="library">Könyvtár</button>
+    <button data-page="downloads">Letöltések</button><button data-page="remote">TV</button><button data-page="settings">Beállítások</button>
+    <button id="usb-open" class="hidden">USB-filmek</button>
+  </nav><div id="connection">Kapcsolódás…</div></header>
+  <div id="message" role="status" class="hidden"></div>
+  <main id="content"></main>
+  <footer><span>▲ ▼ ◀ ▶ Mozgás · OK Megnyitás · Vissza Előző képernyő</span><span id="pairing-hint"></span></footer>
+</div>
+<section id="pairing" class="overlay hidden"><div class="dialog">
+  <div class="eyebrow">ÜDV A SAJÁT MOZIDBAN</div><h1>Kapcsold össze a TV-t<br>a számítógépeddel.</h1>
+  <p>A PC és a TV legyen ugyanazon az otthoni hálózaton. A kódot a PC-n megnyitott Cinema TV oldal mutatja.</p>
+  <label>PC szerver címe<input id="server-url" placeholder="http://192.168.1.50:8790" autocomplete="off"></label>
+  <label>Párosítókód<input id="pairing-pin" inputmode="numeric" maxlength="6" placeholder="6 számjegy" autocomplete="off"></label>
+  <div class="actions"><button id="pair-submit" class="primary">Kapcsolódás</button><button id="pair-later">Most csak az alkalmazások</button></div><p id="pair-error" class="error"></p>
+</div></section>
+<section id="modal" class="overlay hidden"><div class="dialog" id="modal-content"></div></section>
+<section id="playback" class="hidden">
+  <object id="av-player" type="application/avplayer"></object><video id="html-player" playsinline></video>
+  <div id="player-top"><div id="player-title"></div><button id="player-close">Vissza a filmekhez</button></div>
+  <div id="player-note"></div><div id="player-controls"><button id="player-rewind">−30 mp</button><button id="player-toggle">Szünet</button><button id="player-forward">+30 mp</button><span id="player-time"></span></div>
+</section>
+<script src="bootstrap.js"></script><script src="connection.js"></script><script src="apps.js"></script><script src="navigation.js"></script><script src="app.js"></script></body></html>

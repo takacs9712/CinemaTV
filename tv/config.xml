@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<widget xmlns="http://www.w3.org/ns/widgets" xmlns:tizen="http://tizen.org/ns/widgets" id="https://cinema.local/tv" version="0.1.0" viewmodes="maximized">
+    <tizen:application id="CinTV2020x.CinemaTV" package="CinTV2020x" required_version="5.5"/>
+    <content src="index.html"/>
+    <name>Cinema TV</name>
+    <icon src="icon.png"/>
+    <access origin="*" subdomains="true"/>
+    <tizen:profile name="tv-samsung"/>
+    <tizen:privilege name="http://tizen.org/privilege/internet"/>
+    <tizen:privilege name="http://developer.samsung.com/privilege/network.public"/>
+    <tizen:privilege name="http://tizen.org/privilege/tv.inputdevice"/>
+    <tizen:privilege name="http://tizen.org/privilege/application.info"/>
+    <tizen:privilege name="http://tizen.org/privilege/application.launch"/>
+    <tizen:privilege name="http://tizen.org/privilege/filesystem.read"/>
+    <tizen:metadata key="http://samsung.com/tv/metadata/use.network" value="true"/>
+    <tizen:metadata key="http://samsung.com/tv/metadata/screen.size" value="normal"/>
+    <tizen:setting screen-orientation="landscape" context-menu="disable" background-support="disable" encryption="disable" hwkey-event="enable" install-location="auto"/>
+    <tizen:content-security-policy>default-src 'self' data: blob: http: https: file:; script-src 'self' 'unsafe-inline' file:; style-src 'self' 'unsafe-inline'; connect-src 'self' http: https:; img-src 'self' data: file: https:; media-src 'self' http: https: file: blob:; object-src 'self';</tizen:content-security-policy>
+</widget>
