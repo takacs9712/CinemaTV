@@ -19,8 +19,6 @@ A streaming a szolgáltató saját alkalmazásában, saját fiókkal fut. A Cine
 
 ## Gyors használat ezen a PC-n
 
-Az aktív fejlesztői és szerverpéldány: `A:\TVLauncher\tizen-cinema`. A kiválasztott médiamappa: `A:\Filmek`. A cleanyourtv alatti tizen-cinema könyvtár a forráskód másolata; egyszerre csak egy példány szervere és letöltőprofilja fusson. A futási adatokat és jelszavakat nem másoljuk a Git-források közé.
-
 1. Indítsd a `START-CINEMA-TV.cmd` fájlt. Szükséges: telepített Python 3.10+ és qBittorrent. Node csak a fejlesztői ellenőrzésekhez kell.
 2. A PC-n megnyílik a Cinema TV. Kézzel is megnyitható: [helyi kezdőlap](http://127.0.0.1:8790/).
 3. A Kezdőlapon válassz streamingcsempét. A telepített TV-kiadás egy kattintással megnyitja a felismert saját TV-alkalmazást. A PC-s felület az aktív, párosított TV-nek küld indítást. A TV-n a telepített Cinema TV és a PC-s indítás fogadása szükséges; a TV böngészője ehhez nem elegendő. Az alkalmazásváltás után a Cinema TV háttérbe kerülhet: újabb PC-s indításhoz előbb térj vissza hozzá a TV-n. Nincs automatikus Samsung- vagy szolgáltatói bejelentkezés.
@@ -32,7 +30,7 @@ Az aktív fejlesztői és szerverpéldány: `A:\TVLauncher\tizen-cinema`. A kiv�
 Az indító automatikusan felismeri a PC helyi címét. Kézzel megadható PowerShellben, például:
 
 ```powershell
-.\START-CINEMA-TV.ps1 -Library 'A:\Filmek' -PcAddress '192.168.1.50'
+.\START-CINEMA-TV.ps1 -Library 'forrás'
 ```
 
 A fenti IP példa; a valódi címet az indító és a futási könyvtár connection.txt fájlja mutatja. A saját TV-re célzottan készített új csomag az elmentett cím után a PC nevét és a helyi hálózatot is ellenőrzi. Otthoni DHCP-címváltozás miatt nem kell új csomagot telepíteni vagy új párosítókódot megadni.
