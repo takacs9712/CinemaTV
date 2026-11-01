@@ -22,7 +22,8 @@
 <section id="modal" class="overlay hidden"><div class="dialog" id="modal-content"></div></section>
 <section id="playback" class="hidden">
   <object id="av-player" type="application/avplayer"></object><video id="html-player" playsinline></video>
-  <div id="player-top"><div id="player-title"></div><button id="player-close">Vissza a filmekhez</button></div>
-  <div id="player-note"></div><div id="player-controls"><button id="player-rewind">−30 mp</button><button id="player-toggle">Szünet</button><button id="player-forward">+30 mp</button><span id="player-time"></span></div>
+  <div id="player-top"><div id="player-title"></div><div id="player-top-actions"><button id="player-power" data-action="shutdown-ask">PC kikapcsolása</button><button id="player-close">Vissza a filmekhez</button></div></div>
+  <div id="player-note"></div><div id="player-controls"><button id="player-rewind">−30 mp</button><button id="player-toggle">Szünet</button><button id="player-forward">+30 mp</button><span id="player-time"></span><button id="player-audio" class="hidden">Nyelv</button><button id="player-subs" class="hidden">Felirat</button></div>
+  <div id="player-tracks" class="hidden"></div>
 </section>
 <script src="bootstrap.js"></script><script src="connection.js"></script><script src="apps.js"></script><script src="navigation.js"></script><script src="app.js"></script></body></html>

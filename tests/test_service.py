@@ -85,6 +85,32 @@ class HTTPTest(unittest.TestCase):
         connection.close()
         return result
 
+    def test_power_only_schedules_windows_shutdown(self):
+        import cinema.server as server_mod
+        calls = []
+        def fake_run(args, **kwargs):
+            calls.append((args, kwargs))
+            class Result:
+                returncode = 0
+                stdout = ""
+                stderr = ""
+            return Result()
+        original = server_mod.subprocess.run
+        server_mod.subprocess.run = fake_run
+        try:
+            headers = {"Authorization": "Bearer " + self.token}
+            self.assertEqual(self.request("/api/power", "POST", {"action": "shutdown"})[0], 401)
+            self.assertEqual(self.request("/api/power", "POST", {"action": "dir"}, headers)[0], 400)
+            status, _, body = self.request("/api/power", "POST", {"action": "shutdown"}, headers)
+            self.assertEqual(status, 200)
+            self.assertEqual(json.loads(body)["ok"], True)
+            args, kwargs = calls[0]
+            self.assertEqual(args[:4], ["shutdown", "/s", "/f", "/t"])
+            self.assertFalse(kwargs.get("shell"))
+            self.assertEqual(len(calls), 1)
+        finally:
+            server_mod.subprocess.run = original
+
     def test_unauthorized_and_host_rebinding_rejected(self):
         self.assertEqual(self.request("/api/library")[0], 401)
         self.assertEqual(self.request("/api/health", headers={"Host": "attacker.invalid"})[0], 403)

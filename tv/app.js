@@ -8,7 +8,7 @@
   var state = {base: automatic ? storedBase || bootstrap.server : storedBase || (location.protocol.indexOf('http') === 0 ? location.origin : ''),
     token: bindingChanged ? '' : localStorage.getItem('cinema.token') || '', page: 'home', videos: [], movies: [], jobs: [], settings: {},
     selected: null, waiting: localStorage.getItem('cinema.waiting') || '', playing: null, av: false,
-    busy: false, lastProgress: 0, local: false, usb: false, modalReturn: null, pageFocus: {}, detailReturn: null, online: false, connecting: false, generation: 0,
+    busy: false, lastProgress: 0, local: false, usb: false, modalReturn: null, pageFocus: {}, detailReturn: null, online: false, connecting: false, generation: 0, chromeTimer: 0, audioIndex: null, textIndex: null, tracks: {audio: [], text: []},
     receiving: localStorage.getItem('cinema.receiver') === 'true' || (!!window.tizen && localStorage.getItem('cinema.receiver') !== 'false'), remoteAck: '', remoteBusy: false, remoteStatus: 'Készen áll', receivers: []};
   var apps = window.CinemaApps;
   var navigation = window.CinemaNavigation;
@@ -218,7 +218,7 @@
       html += '<h2>A TV-n talált alkalmazások</h2>' + (apps.installed().length ? '<div class="installed-grid">' + apps.installed().map(function (app) { return installedCard(app, true); }).join('') + '</div>' : '<div class="panel"><p>' + text(appStatus()) + '</p></div>');
       html += '<p class="small">A streaming saját alkalmazásban fut, saját fiókkal. A Cinema TV önálló médiaközpont; a Samsung Home gombja továbbra is a Smart Hubot nyitja meg.</p>';
     } else if (state.page === 'remote') {
-      html = '<h1>TV vezérlése Wi-Fi-n</h1><p>A saját film a PC-n marad. A TV-n megnyitott Cinema TV fogadja az indítást; a TV USB-lemezére ez a művelet nem másol.</p><div class="actions"><button data-action="receiver-toggle">PC-s indítás fogadása ezen a képernyőn: ' + (state.receiving ? 'BE' : 'KI') + '</button>' + (state.local ? '<button data-action="receivers-refresh">Fogadók frissítése</button>' : '') + '</div>' +
+      html = '<h1>TV vezérlése Wi-Fi-n</h1><p>A saját film a PC-n marad. A TV-n megnyitott Cinema TV fogadja az indítást; a TV USB-lemezére ez a művelet nem másol.</p><div class="actions"><button data-action="receiver-toggle">PC-s indítás fogadása ezen a képernyőn: ' + (state.receiving ? 'BE' : 'KI') + '</button>' + (state.local ? '<button data-action="receivers-refresh">Fogadók frissítése</button>' : '') + '<button data-action="shutdown-ask">PC kikapcsolása</button></div>' +
         (state.local ? '<h2>Csatlakozott képernyők</h2><p>A Könyvtárban válassz filmet, majd Lejátszás a TV-n. Itt szüneteltethetsz és tekerhetsz.</p><div id="receiver-list">' + remoteCards() + '</div>' : '<div class="panel"><p>Ha a fogadás BE állapotú, a PC-n kiválasztott film itt indul. A Cinema TV maradjon nyitva az előtérben. A böngésző a lejátszás kezdetén OK megnyomását kérheti.</p></div>');
     } else if (state.page === 'library') {
       html = '<h1>' + (state.usb ? 'USB-filmek' : 'Saját médiatár') + '</h1><p>' + state.videos.length + ' film · ' + (state.usb ? 'közvetlenül a TV USB-meghajtójáról' : 'a számítógépedről, helyi hálózaton') + '</p><div class="actions"><button data-action="rescan">Frissítés</button></div><div class="grid">' + state.videos.map(card).join('') + '</div>';
@@ -231,6 +231,7 @@
         '<div class="panel settings-form"><h3>Letöltés és lejátszás</h3><div class="inline"><label>Maximum torrentméret (GiB)<input id="max-gib" type="number" min="1" max="500" value="' + state.settings.max_gib + '"></label><label>Szabadhelytartalék (GiB)<input id="reserve-gib" type="number" min="1" max="100" value="' + state.settings.reserve_gib + '"></label></div>' +
         '<button data-action="autoplay">Automatikus indítás: ' + (state.settings.autoplay ? 'be' : 'ki') + '</button><div class="actions"><button class="primary" data-action="save-settings">Beállítások mentése</button></div></div>' +
         (state.local ? '<div class="panel settings-form"><h3>TMDb-katalógus</h3><label>Saját API Read Access Token<input id="tmdb-token" type="password" placeholder="' + (state.settings.tmdb_configured ? 'Már beállítva; új tokennel felülírható' : 'A helyi filmlejátszáshoz nem szükséges') + '"></label><button data-action="save-tmdb">Token mentése a PC-n</button><p class="small">A token titkosítva tárolódik a Windows-fiókod alatt. Nem a TMDb-jelszót várja.</p></div>' : '') +
+        '<div class="panel"><h3>PC</h3><p>Ha a filmnek vége, a tévé leállíthatja a számítógépet. A lejátszás és a letöltés megszakad.</p><button data-action="shutdown-ask">PC kikapcsolása</button></div>' +
         '<div class="panel"><h3>Tudnivalók</h3><p>A PC legyen bekapcsolva és elérhető a lejátszás alatt. A TV USB-lemezére ez a kiadás nem másol automatikusan. Az USB-filmek olvasása a telepített Tizen-appban külön próbálható.</p><p>nCore: engedélyezett API hiányában saját .torrent fájl importálható; automatikus bejelentkezés nincs.</p><button data-action="reconnect">Újrapárosítás / másik PC</button></div>';
     }
     $('content').innerHTML = html;
@@ -313,8 +314,135 @@
     if (film.usb) openPlayer(film, film.uri);
     else api('/api/play', {id: identifier}).then(function (result) { openPlayer(film, state.base + result.path); }).catch(error);
   }
+  var trackLanguages = {hu:'Magyar',hun:'Magyar',en:'Angol',eng:'Angol',de:'Német',deu:'Német',ger:'Német',fr:'Francia',fra:'Francia',fre:'Francia',es:'Spanyol',spa:'Spanyol',it:'Olasz',ita:'Olasz',ru:'Orosz',rus:'Orosz',pl:'Lengyel',pol:'Lengyel',cs:'Cseh',ces:'Cseh',cze:'Cseh',sk:'Szlovák',slk:'Szlovák',ro:'Román',ron:'Román',rum:'Román',nl:'Holland',dut:'Holland',nld:'Holland',pt:'Portugál',por:'Portugál',sv:'Svéd',swe:'Svéd',no:'Norvég',nor:'Norvég',da:'Dán',dan:'Dán',fi:'Finn',fin:'Finn',ja:'Japán',jpn:'Japán',ko:'Koreai',kor:'Koreai',zh:'Kínai',chi:'Kínai',zho:'Kínai',ar:'Arab',ara:'Arab',tr:'Török',tur:'Török',uk:'Ukrán',ukr:'Ukrán',hr:'Horvát',hrv:'Horvát',sr:'Szerb',srp:'Szerb',bg:'Bolgár',bul:'Bolgár',el:'Görög',ell:'Görög',gre:'Görög',he:'Héber',heb:'Héber',hi:'Hindi',hin:'Hindi',th:'Thai',tha:'Thai',vi:'Vietnámi',vie:'Vietnámi'};
+  function note(value) { $('player-note').textContent = value || ''; showChrome(); }
+  function showChrome() {
+    clearTimeout(state.chromeTimer);
+    if (!$('playback')) return;
+    $('playback').classList.remove('idle');
+    if (!state.playing || $('player-note').textContent || !$('player-tracks').classList.contains('hidden')) return;
+    state.chromeTimer = setTimeout(function () {
+      if (!state.playing || $('player-note').textContent || !$('player-tracks').classList.contains('hidden')) return;
+      $('playback').classList.add('idle');
+    }, 4500);
+  }
+  function trackMeta(track) {
+    var raw = track && track.extra_info;
+    if (!raw) return {};
+    if (typeof raw === 'object') return raw;
+    try { return JSON.parse(raw); } catch (e) { return {}; }
+  }
+  function trackName(track, kind, index) {
+    var info = trackMeta(track);
+    var code = String(info.language || info.track_lang || info.lang || '').toLowerCase().split(/[-_]/)[0];
+    var named = trackLanguages[code] || '';
+    var label = info.label || info.title || '';
+    if (named && label && label.toLowerCase() !== named.toLowerCase() && label.toLowerCase() !== code) return named + ' · ' + label;
+    return named || label || ((kind === 'audio' ? 'Hangsáv ' : 'Felirat ') + (index + 1));
+  }
+  function rememberStreams() {
+    state.audioIndex = state.tracks.audio.length ? String(state.tracks.audio[0].index) : null;
+    state.textIndex = null;
+    if (!state.av) {
+      var video = $('html-player'), audios = video.audioTracks, texts = video.textTracks, i;
+      if (audios) for (i = 0; i < audios.length; i++) if (audios[i].enabled) state.audioIndex = String(i);
+      if (texts) for (i = 0; i < texts.length; i++) if (texts[i].mode === 'showing') state.textIndex = String(i);
+      return;
+    }
+    var current = [];
+    try { current = webapis.avplay.getCurrentStreamInfo() || []; } catch (e) {}
+    current.forEach(function (stream) {
+      var kind = String(stream.type || '').toUpperCase();
+      if (kind === 'AUDIO') state.audioIndex = String(stream.index);
+      if (kind === 'TEXT') state.textIndex = String(stream.index);
+    });
+  }
+  function loadTracks() {
+    if (!state.playing) return;
+    state.tracks = {audio: [], text: []};
+    if (state.av) {
+      var info = [];
+      try { info = webapis.avplay.getTotalTrackInfo() || []; } catch (e) { info = []; }
+      info.forEach(function (track) {
+        var kind = String(track.type || '').toUpperCase();
+        if (kind === 'AUDIO') state.tracks.audio.push(track);
+        if (kind === 'TEXT') state.tracks.text.push(track);
+      });
+    } else {
+      var video = $('html-player'), audios = video.audioTracks, texts = video.textTracks, i;
+      if (audios) for (i = 0; i < audios.length; i++) state.tracks.audio.push({index: String(i), extra_info: JSON.stringify({language: audios[i].language, label: audios[i].label})});
+      if (texts) for (i = 0; i < texts.length; i++) {
+        if (texts[i].kind === 'subtitles' || texts[i].kind === 'captions') state.tracks.text.push({index: String(i), extra_info: JSON.stringify({language: texts[i].language, label: texts[i].label})});
+      }
+    }
+    rememberStreams();
+    updateTrackLabels();
+  }
+  function updateTrackLabels() {
+    show('player-audio', state.tracks.audio.length > 1);
+    show('player-subs', state.tracks.text.length > 0);
+    var audio = null, sub = null, n;
+    for (n = 0; n < state.tracks.audio.length; n++) if (String(state.tracks.audio[n].index) === String(state.audioIndex)) audio = state.tracks.audio[n];
+    for (n = 0; n < state.tracks.text.length; n++) if (String(state.tracks.text[n].index) === String(state.textIndex)) sub = state.tracks.text[n];
+    if (audio) $('player-audio').textContent = 'Nyelv: ' + trackName(audio, 'audio', state.tracks.audio.indexOf(audio));
+    if (sub) $('player-subs').textContent = 'Felirat: ' + trackName(sub, 'text', state.tracks.text.indexOf(sub));
+    else $('player-subs').textContent = 'Felirat: Ki';
+  }
+  function openTrackMenu(kind) {
+    var box = $('player-tracks');
+    if (!box.classList.contains('hidden') && box.getAttribute('data-kind') === kind) { show('player-tracks', false); showChrome(); return; }
+    var items = kind === 'audio' ? state.tracks.audio : [{index: 'off', off: true}].concat(state.tracks.text);
+    box.setAttribute('data-kind', kind);
+    box.innerHTML = items.map(function (track, index) {
+      var selected = kind === 'audio' ? String(track.index) === String(state.audioIndex) : (track.off ? state.textIndex == null : String(track.index) === String(state.textIndex));
+      var label = track.off ? 'Kikapcsolva' : trackName(track, kind, kind === 'audio' ? index : index - 1);
+      return '<button data-track="' + kind + '" data-track-index="' + text(track.index) + '"' + (selected ? ' class="primary"' : '') + '>' + text(label) + '</button>';
+    }).join('');
+    show('player-tracks', true);
+    showChrome();
+    navigation.focus(box.querySelector('button.primary') || box.querySelector('button'));
+  }
+  function chooseTrack(kind, index) {
+    try {
+      if (kind === 'audio') {
+        if (state.av) webapis.avplay.setSelectTrack('AUDIO', Number(index));
+        else {
+          var audios = $('html-player').audioTracks, chosen = Number(index), i;
+          if (audios && audios[chosen]) audios[chosen].enabled = true;
+          if (audios) for (i = 0; i < audios.length; i++) if (i !== chosen) audios[i].enabled = false;
+        }
+        state.audioIndex = String(index);
+      } else if (index === 'off') {
+        if (state.av) webapis.avplay.setSilentSubtitle(true);
+        else {
+          var texts = $('html-player').textTracks, j;
+          if (texts) for (j = 0; j < texts.length; j++) texts[j].mode = 'disabled';
+        }
+        state.textIndex = null;
+      } else {
+        if (state.av) { try { webapis.avplay.setSilentSubtitle(false); } catch (ignore) {} webapis.avplay.setSelectTrack('TEXT', Number(index)); }
+        else {
+          var list = $('html-player').textTracks, picked = Number(index), k;
+          if (list) for (k = 0; k < list.length; k++) list[k].mode = k === picked ? 'showing' : 'disabled';
+        }
+        state.textIndex = String(index);
+      }
+      note('');
+    } catch (e) { note('A sáv nem váltható: ' + (e.message || e)); }
+    show('player-tracks', false);
+    updateTrackLabels();
+    showChrome();
+  }
+  function watchHtmlTracks(video) {
+    function hook(list) { if (list && list.addEventListener) list.addEventListener('addtrack', function () { if (state.playing) loadTracks(); }); }
+    hook(video.audioTracks); hook(video.textTracks);
+  }
   function openPlayer(film, url) {
-    state.playing = film; $('player-title').textContent = film.title; $('player-note').textContent = 'Videó előkészítése…'; show('playback', true);
+    state.playing = film; $('player-title').textContent = film.title; show('playback', true);
+    state.tracks = {audio: [], text: []}; state.audioIndex = null; state.textIndex = null;
+    show('player-audio', false); show('player-subs', false); show('player-tracks', false);
+    $('playback').classList.remove('idle');
+    note('Videó előkészítése…');
     state.av = !!(window.webapis && webapis.avplay);
     if (state.av) {
       show('html-player', false); show('av-player', true);
@@ -322,31 +450,34 @@
         webapis.avplay.open(url);
         webapis.avplay.setDisplayRect(0, 0, 1920, 1080);
         webapis.avplay.setDisplayMethod('PLAYER_DISPLAY_MODE_LETTER_BOX');
-        webapis.avplay.setListener({onbufferingstart: function () { $('player-note').textContent = 'Pufferelés…'; }, onbufferingcomplete: function () { $('player-note').textContent = ''; },
-          onstreamcompleted: function () { saveProgress(); closePlayer(); }, onerror: function (code) { $('player-note').textContent = 'Lejátszási hiba: ' + code + '. Ellenőrizd a kodeket és a PC kapcsolatát.'; }});
+        webapis.avplay.setListener({onbufferingstart: function () { note('Pufferelés…'); }, onbufferingcomplete: function () { note(''); loadTracks(); },
+          onstreamcompleted: function () { saveProgress(); closePlayer(); }, onerror: function (code) { note('Lejátszási hiba: ' + code + '. Ellenőrizd a kodeket és a PC kapcsolatát.'); }});
         webapis.avplay.prepareAsync(function () {
           if (!state.playing) return;
+          loadTracks();
           if (film.position > 0 && !film.watched) webapis.avplay.seekTo(Math.round(film.position * 1000));
-          webapis.avplay.play(); $('player-note').textContent = '';
-        }, function () { $('player-note').textContent = 'A Samsung nem tudta előkészíteni a videót. Ellenőrizd a formátumot és a kapcsolatot.'; });
-      } catch (e) { $('player-note').textContent = 'AVPlay hiba: ' + e.message; }
+          webapis.avplay.play(); note('');
+        }, function () { note('A Samsung nem tudta előkészíteni a videót. Ellenőrizd a formátumot és a kapcsolatot.'); });
+      } catch (e) { note('AVPlay hiba: ' + e.message); }
     } else {
       show('av-player', false); show('html-player', true);
       var video = $('html-player'); video.src = url;
-      video.onloadedmetadata = function () { if (film.position > 0 && !film.watched) video.currentTime = film.position; };
-      video.onplaying = function () { $('player-note').textContent = ''; };
-      video.onerror = function () { $('player-note').textContent = 'A böngésző nem támogatja ezt a videót. A telepített Tizen-app több formátumot támogathat AVPlay segítségével.'; };
+      watchHtmlTracks(video);
+      video.onloadedmetadata = function () { if (film.position > 0 && !film.watched) video.currentTime = film.position; loadTracks(); };
+      video.onplaying = function () { note(''); };
+      video.onerror = function () { note('A böngésző nem támogatja ezt a videót. A telepített Tizen-app több formátumot támogathat AVPlay segítségével.'); };
       video.onended = closePlayer;
-      var promise = video.play(); if (promise && promise.catch) promise.catch(function () { $('player-note').textContent = 'A lejátszás indításához nyomd meg az OK / Folytatás gombot.'; });
+      var promise = video.play(); if (promise && promise.catch) promise.catch(function () { note('A lejátszás indításához nyomd meg az OK / Folytatás gombot.'); });
     }
     $('player-toggle').textContent = 'Szünet'; $('player-toggle').focus();
   }
   function closePlayer() {
     if (!state.playing) return;
     saveProgress();
+    clearTimeout(state.chromeTimer);
     if (state.av) { try { webapis.avplay.stop(); webapis.avplay.close(); } catch (_) {} }
     else { $('html-player').pause(); $('html-player').removeAttribute('src'); $('html-player').load(); }
-    state.playing = null; state.av = false; show('playback', false); loadLibrary(); focusFirst();
+    state.playing = null; state.av = false; $('playback').classList.remove('idle'); show('player-tracks', false); show('playback', false); loadLibrary(); focusFirst();
   }
   function togglePlayer() {
     if (!state.playing) return;
@@ -397,6 +528,8 @@
     else if (name === 'autoplay') { state.settings.autoplay = !state.settings.autoplay; api('/api/settings', {autoplay: state.settings.autoplay}).then(function () { render(); }).catch(error); }
     else if (name === 'save-settings') api('/api/settings', {max_gib: Number($('max-gib').value), reserve_gib: Number($('reserve-gib').value)}).then(function () { connect(); message('Beállítások mentve.'); }).catch(error);
     else if (name === 'save-tmdb') api('/api/settings', {tmdb_token: $('tmdb-token').value.trim()}).then(function () { connect(); message('TMDb-token mentve.'); }).catch(error);
+    else if (name === 'shutdown-ask') modal('<h2>Kikapcsolod a PC-t?</h2><p>A film leáll, a futó letöltés megszakad, és a számítógép néhány másodperc múlva leáll.</p><div class="actions"><button data-action="shutdown-pc">PC kikapcsolása</button><button class="primary" data-action="modal-close">Mégse</button></div>');
+    else if (name === 'shutdown-pc') api('/api/power', {action:'shutdown'}).then(function () { closeModal(); message('A PC leáll.'); }).catch(error);
     else if (name === 'search') modal('<h2>Filmkeresés</h2><input id="search-value" placeholder="Filmcím"><div class="actions"><button class="primary" data-action="do-search">Keresés</button><button data-action="modal-close">Mégse</button></div>');
     else if (name === 'do-search') {
       var query = $('search-value').value.trim(); closeModal();
@@ -408,6 +541,7 @@
   }
   document.addEventListener('click', function (event) {
     var node = event.target.closest('button'); if (!node) return;
+    if (state.playing) showChrome();
     if (node.hasAttribute('data-page')) navigate(node.getAttribute('data-page'));
     else if (node.hasAttribute('data-tv-service')) sendService(node.getAttribute('data-receiver'), node.getAttribute('data-tv-service'));
     else if (node.hasAttribute('data-send-tv')) sendToTv(node.getAttribute('data-send-tv'));
@@ -417,6 +551,9 @@
     else if (node.hasAttribute('data-pin-app')) { apps.togglePin(node.getAttribute('data-pin-app')); render(); }
     else if (node.hasAttribute('data-video')) details(node.getAttribute('data-video'));
     else if (node.hasAttribute('data-action')) action(node.getAttribute('data-action'));
+    else if (node.id === 'player-audio') openTrackMenu('audio');
+    else if (node.id === 'player-subs') openTrackMenu('text');
+    else if (node.hasAttribute('data-track')) chooseTrack(node.getAttribute('data-track'), node.getAttribute('data-track-index'));
     else if (node.hasAttribute('data-play')) play(node.getAttribute('data-play'));
     else if (node.hasAttribute('data-ready-video')) { state.waiting = ''; localStorage.removeItem('cinema.waiting'); play(node.getAttribute('data-ready-video')); }
     else if (node.hasAttribute('data-favorite')) api('/api/favorite', {id: node.getAttribute('data-favorite')}).then(function () { state.selected = null; loadLibrary(); }).catch(error);
@@ -441,10 +578,16 @@
       }
       return;
     }
+    if (state.playing && !back) {
+      var idle = $('playback').classList.contains('idle');
+      if (idle && $('player-tracks').classList.contains('hidden') && ((code >= 37 && code <= 40) || code === 13)) { event.preventDefault(); showChrome(); return; }
+      showChrome();
+    }
     if (back) {
       event.preventDefault(); event.stopPropagation();
       if (heldKeys.back || event.repeat) return; heldKeys.back = true;
       if (!$('modal').classList.contains('hidden')) closeModal();
+      else if (state.playing && !$('player-tracks').classList.contains('hidden')) { show('player-tracks', false); showChrome(); }
       else if (state.playing) closePlayer();
       else if (!$('pairing').classList.contains('hidden')) { show('pairing', false); navigate('apps'); }
       else if (state.selected) backDetails();
@@ -475,6 +618,8 @@
   document.addEventListener('click', function (e) { if (e.target.id === 'exit-app' && window.tizen) tizen.application.getCurrentApplication().exit(); });
   $('pair-submit').onclick = pair; $('usb-open').onclick = usb;
   $('pair-later').onclick = function () { show('pairing', false); navigate('apps'); focusFirst(); };
+  document.addEventListener('mousemove', function () { if (state.playing) showChrome(); });
+  document.addEventListener('click', function (event) { if (!state.playing || (event.target.closest && event.target.closest('button'))) return; showChrome(); });
   $('player-close').onclick = closePlayer; $('player-toggle').onclick = togglePlayer;
   $('player-rewind').onclick = function () { seek(-30); }; $('player-forward').onclick = function () { seek(30); };
   document.addEventListener('visibilitychange', function () { if (document.hidden && state.playing) { saveProgress(); if (state.av) { try { webapis.avplay.pause(); } catch (_) {} } else $('html-player').pause(); } else if (!document.hidden) { apps.refresh(function () { if (!state.selected && !state.playing) render(); }); } });

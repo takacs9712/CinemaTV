@@ -289,6 +289,15 @@ class Handler(BaseHTTPRequestHandler):
         elif path == "/api/renew-pairing" and mutate and self.local_peer():
             self.json_body()
             self.reply(200, {"pin": self.server.pairing.renew(), "expires": self.server.pairing.expires})
+        elif path == "/api/power" and mutate:
+            if self.json_body().get("action") != "shutdown":
+                raise ValueError("Csak a PC leállítása kérhető.")
+            flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+            result = subprocess.run(["shutdown", "/s", "/f", "/t", "8", "/c", "Cinema TV leallitja a PC-t."], capture_output=True, text=True, timeout=15, creationflags=flags)
+            if result.returncode != 0:
+                detail = (result.stderr or result.stdout or "").strip()
+                raise RuntimeError(detail[:200] or "A PC leállítása nem indult el.")
+            self.reply(200, {"ok": True})
         else:
             self.reply(404, {"error": "Ismeretlen API-művelet."})
 
